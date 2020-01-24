@@ -39,5 +39,4 @@ Vagrant.configure(2) do |config|
         ansible.playbook = "/odk-x-stack/0_install.yml"
     end
 
-
 end

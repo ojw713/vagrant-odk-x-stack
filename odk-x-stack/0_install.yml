@@ -15,54 +15,55 @@
     set_fact:
       platform: "{{ print_architecture.stdout }}"
 
-  - name: Install unzip for unpacking files later on
-    apt: name=unzip state=latest
+  - name: Install packages for ODK-X
+    apt:
+      pkg:
+      - unzip
+      - vim
+      - curl
+      - expect
+      - python-pexpect
+      - openjdk-8-jdk
+      - python-pip
+      - docker.io
+      - maven
+      - git
+      - software-properties-common
+      - gnupg-agent
+      - ca-certificates
+      - apt-transport-https
 
-  - name: Install Vim, because plain Vi is driving me crazy
-    apt: name=vim state=latest
-
-  - name: Install cURL for testing
-    apt: name=curl state=latest
-
-  - name: Install expect for ansible
-    apt: name=expect state=latest
-
-  - name: Install pexpect for ansible
-    apt: name=python-pexpect state=latest
-
-  - name: Install the JRE
-    apt: name=openjdk-8-jre-headless state=latest update_cache=yes install_recommends=no
-
-  - name: Install the JDK
-    apt: name=openjdk-8-jdk state=latest update_cache=yes install_recommends=no
-
-  - name: Install pip to get current Python dependencies
-    apt: name=python-pip state=latest
-
-  - name: Install Docker
-    apt: name=docker.io state=latest
-    when: "platform == 'amd64'"
+  - name: Update and upgrade apt packages
+    apt:
+      upgrade: safe
+      update_cache: yes
+      cache_valid_time: 86400 #One day
 
   - name: Make sure Docker autostarts and is started
     service: name=docker enabled=yes state=started
-    when: "platform == 'amd64'"
 
   - name: Install Docker for Python to handle Docker from Ansible
-    pip: name=docker state=latest
-    when: "platform == 'amd64'"
+    pip: 
+      name:
+        - docker
+        - jsondiff
 
-  - name: Install Jsondiff for Python to handle Docker Stack from Ansible
-    pip: name=jsondiff state=latest
+  - name: Clone ODK Sync EndPoints Repo
+    git:
+      repo: 'https://github.com/opendatakit/sync-endpoint'
+      depth: 1
+      version: 'master'
+      dest: /usr/local/sync-endpoint
 
-  - name: Init a new swarm with default parameters
-    docker_swarm:
-      state: present
-
-  - name: Install Maven for ODK Sync EndPoints
-    apt: name=maven state="latest"
-
-  - name: Install Git for ODK Sync EndPoints
-    apt: name=git state="latest"
+  - name: Use Maven to Build ODK Sync EndPoints (SLOW)
+    command: mvn clean install -DskipTests
+    args:
+      chdir: /usr/local/sync-endpoint
+    register: results
+    
+  - name: Maven Build Results
+    debug:
+      msg: '{{ results.stdout_lines[-16:] }}'
 
   - name: Clone ODK Sync EndPoints Default Setup Repo
     git:
@@ -71,27 +72,14 @@
       version: 'master'
       dest: /usr/local/sync-endpoint-default-setup
 
-  - name: Clone ODK Sync EndPoints Repo
-    git:
-      repo: 'https://github.com/opendatakit/sync-endpoint'
-      depth: 1
-      version: 'master'
-      dest: /usr/local/sync-endpoint-default-setup/sync-endpoint
-
-  - name: Use Maven to Build ODK Sync EndPoints (SLOW)
-    command: mvn -Dmaven.test.skip=true install
-    args:
-      chdir: /usr/local/sync-endpoint-default-setup/sync-endpoint
-    register: results
-
-  - name: Maven Build Results
-    debug:
-      msg: '{{ results.stdout_lines[-16:] }}'
+  - name: Init a new swarm with default parameters
+    docker_swarm:
+      state: present
 
   - name: Setup ODK Sync EndPoint WebUI Docker Image
-    shell: docker build --pull -t odk/sync-web-ui https://github.com/opendatakit/sync-endpoint-web-ui.git
+    shell: docker build --pull -t odk/sync-web-ui https://github.com/ojw713/sync-endpoint-web-ui.git
     args:
-      chdir: /usr/local/sync-endpoint-default-setup
+      chdir: /usr/local
 
   - name: Setup ODK DB-Bootstrap Docker Image
     docker_image:
@@ -116,12 +104,6 @@
         pull: true
         path: /usr/local/sync-endpoint-default-setup/phpldapadmin
       source: build
-
-  - name: Update the Server Hostname
-    lineinfile:
-      path: /usr/local/sync-endpoint-default-setup/config/sync-endpoint/security.properties
-      line: "security.server.hostname=127.0.0.1"
-      create: true
 
   - name: Update the Server HTTP Port
     lineinfile:
