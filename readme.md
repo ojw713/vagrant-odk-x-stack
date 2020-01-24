@@ -20,9 +20,9 @@ Future Plans
 
 ## ODK Web-UI
 
-Access Kibana at [http://127.0.0.1:8081](http://127.0.0.1:8081).
+Access at [http://127.0.0.1:8081](http://127.0.0.1:8081).
 
 
 ## ODK LDAP Admin
 
-Filebeat port for Logstash at [https://127.0.0.1:40000](https://127.0.0.1:40000).
+Access at [https://127.0.0.1:40000](https://127.0.0.1:40000).
