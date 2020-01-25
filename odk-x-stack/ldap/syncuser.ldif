@@ -1,0 +1,13 @@
+dn: uid=syncuser,ou=people,dc=example,dc=org
+changetype: add
+cn: Sync User
+gidnumber: 503
+givenname: Sync
+homedirectory: /home/users/syncuser
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: top
+sn: User
+uid: syncuser
+uidnumber: 1000
+userpassword

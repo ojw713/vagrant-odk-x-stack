@@ -15,7 +15,13 @@
     set_fact:
       platform: "{{ print_architecture.stdout }}"
 
-  - name: Install packages for ODK-X
+  - name: Update and upgrade apt packages
+    apt:
+      upgrade: safe
+      update_cache: yes
+      cache_valid_time: 86400 #One day
+
+  - name: Install packages for odk-x and ansible (SLOW)
     apt:
       pkg:
       - unzip
@@ -33,55 +39,44 @@
       - ca-certificates
       - apt-transport-https
 
-  - name: Update and upgrade apt packages
-    apt:
-      upgrade: safe
-      update_cache: yes
-      cache_valid_time: 86400 #One day
-
-  - name: Make sure Docker autostarts and is started
+  - name: Make sure docker autostarts and is started
     service: name=docker enabled=yes state=started
 
-  - name: Install Docker for Python to handle Docker from Ansible
+  - name: Install docker for python to handle docker from ansible
     pip: 
       name:
         - docker
         - jsondiff
 
-  - name: Clone ODK Sync EndPoints Repo
+  - name: Clone odk-x sync-endpoint repo
     git:
       repo: 'https://github.com/opendatakit/sync-endpoint'
       depth: 1
       version: 'master'
       dest: /usr/local/sync-endpoint
 
-  - name: Use Maven to Build ODK Sync EndPoints (SLOW)
+  - name: Use maven to build odk-x sync-endpoint (SLOW)
     command: mvn clean install -DskipTests
     args:
       chdir: /usr/local/sync-endpoint
-    register: results
-    
-  - name: Maven Build Results
-    debug:
-      msg: '{{ results.stdout_lines[-16:] }}'
 
-  - name: Clone ODK Sync EndPoints Default Setup Repo
+  - name: Clone odk-x default setup repo
     git:
       repo: 'https://github.com/opendatakit/sync-endpoint-default-setup'
       depth: 1
       version: 'master'
       dest: /usr/local/sync-endpoint-default-setup
 
-  - name: Init a new swarm with default parameters
+  - name: Initialize a new swarm with default parameters
     docker_swarm:
       state: present
 
-  - name: Setup ODK Sync EndPoint WebUI Docker Image
+  - name: Setup odk-x web-ui docker image
     shell: docker build --pull -t odk/sync-web-ui https://github.com/ojw713/sync-endpoint-web-ui.git
     args:
       chdir: /usr/local
 
-  - name: Setup ODK DB-Bootstrap Docker Image
+  - name: Setup odk-x db-bootstrap docker image
     docker_image:
       name: odk/db-bootstrap
       build:
@@ -89,7 +84,7 @@
         path: /usr/local/sync-endpoint-default-setup/db-bootstrap
       source: build
 
-  - name: Setup ODK OpenLDAP Docker Image
+  - name: Setup odk-x openldap docker image
     docker_image:
       name: odk/openldap
       build:
@@ -97,7 +92,7 @@
         path: /usr/local/sync-endpoint-default-setup/openldap
       source: build
 
-  - name: Setup ODK PHP LDAP Admin Docker Image
+  - name: Setup odk-x phpldapadmin docker image
     docker_image:
       name: odk/phpldapadmin
       build:
@@ -105,25 +100,57 @@
         path: /usr/local/sync-endpoint-default-setup/phpldapadmin
       source: build
 
-  - name: Update the Server HTTP Port
+  - name: Update the sync-endpoint server http port
     lineinfile:
       path: /usr/local/sync-endpoint-default-setup/config/sync-endpoint/security.properties
       line: "security.server.port=8081"
       create: true
 
-  - name: Insert Updated Port in docker-compose.yml
-    blockinfile:
-      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
-      insertafter: '# - org.opendatakit.aggregate.logging.properties'
-      marker: '    # Port Change - Ansible'
-      state: present
-      content: |2
-            ports:
-              - 8081:8080
+  - name: Update the nginx listen port
+    lineinfile:
+      path: /usr/local/sync-endpoint-default-setup/config/nginx/sync-endpoint-http.conf
+      regexp: 'listen 80;'
+      line: "\tlisten 8081;"
 
-  - name: Deploy ODK EndPoint Sync Docker Stack
+  - name: Updated nginx network port in docker-compose
+    lineinfile:
+      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
+      regexp: '\- "80:80"'
+      line: '      - "8081:8081"'
+
+  - name: Deploy odk-x docker stack (syncldap)
     docker_stack:
       state: present
       name: syncldap
       compose:
         - /usr/local/sync-endpoint-default-setup/docker-compose.yml
+
+  - name: Wait for odk-x stack to start
+    wait_for:
+      port: 8081
+      delay: 5
+
+  - name: Copy ldif files
+    template:
+      src: /odk-x-stack/ldap/{{item}}
+      dest: /usr/local
+    with_items:
+      - syncgroup.ldif
+      - syncuser.ldif
+
+  - name: Set syncuser password 
+    lineinfile:
+      path: /usr/local/syncuser.ldif
+      regexp: 'userpassword'
+      line: 'userpassword: {{ sync_user_password }}'
+
+  - name: Add ldif files to docker container
+    shell: |
+      docker cp /usr/local/syncuser.ldif $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}'):/usr/local/syncuser.ldif
+      docker cp /usr/local/syncgroup.ldif $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}'):/usr/local/syncgroup.ldif
+
+  - name: Add syncuser to ldap
+    shell: |
+      docker exec $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}') ldapmodify -x -D 'cn=admin,dc=example,dc=org' -w admin -c -f /usr/local/syncuser.ldif
+      docker exec $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}') ldapmodify -x -D 'cn=admin,dc=example,dc=org' -w admin -c -f /usr/local/syncgroup.ldif
+
