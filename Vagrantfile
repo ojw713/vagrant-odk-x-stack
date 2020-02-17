@@ -13,6 +13,7 @@ Vagrant.configure(2) do |config|
 
         ubuntu.vm.network :forwarded_port, guest: 8081, host: 8081
         ubuntu.vm.network :forwarded_port, guest: 40000, host: 40000
+        ubuntu.vm.network :forwarded_port, guest: 9223, host: 9223
 
         # If you export the box switch to the second line to keep the /odk-x-stack/ folder
         ubuntu.vm.synced_folder "odk-x-stack/", "/odk-x-stack/"

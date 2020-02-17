@@ -38,6 +38,11 @@
       - gnupg-agent
       - ca-certificates
       - apt-transport-https
+      - nodejs
+      - npm
+
+  - name: Switch Java version to 8
+    shell: update-java-alternatives --set /usr/lib/jvm/java-1.8.0-openjdk-amd64
 
   - name: Make sure docker autostarts and is started
     service: name=docker enabled=yes state=started
@@ -72,7 +77,7 @@
       state: present
 
   - name: Setup odk-x web-ui docker image
-    shell: docker build --pull -t odk/sync-web-ui https://github.com/ojw713/sync-endpoint-web-ui.git
+    shell: docker build --pull -t odk/sync-web-ui https://github.com/opendatakit/sync-endpoint-web-ui.git
     args:
       chdir: /usr/local
 
