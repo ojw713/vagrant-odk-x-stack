@@ -1,6 +1,6 @@
 # ODK-X Stack in a Box
 
-This repository will install the [ODK-X](https://opendatakit.org/software/odk-x/) (ODK-X Tables, Survey, Services, Application Designer, Suitcase, Sync Endpoint)
+This repository will install the [ODK-X](https://opendatakit.org/software/odk-x/) (Sync Endpoint)
 
 
 ## Vagrant and Ansible
