@@ -123,6 +123,15 @@
       regexp: '\- "80:80"'
       line: '      - "8081:8081"'
 
+  - name: Expose postgres port in docker-compose
+    blockinfile:
+      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
+      marker: "# Ansible was here {mark}"
+      insertafter: "      - db-vol:/var/lib/postgresql/data"
+      block: |2
+            ports:
+              - "5432:5432"
+
   - name: Deploy odk-x docker stack (syncldap)
     docker_stack:
       state: present

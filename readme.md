@@ -5,6 +5,9 @@ This repository will install the [ODK-X](https://opendatakit.org/software/odk-x/
 
 ## Vagrant and Ansible
 
+**This repositiory requires the [vagrant reload plugin](https://github.com/aidanns/vagrant-reload)**
+- `vagrant plugin install vagrant-reload`
+
 Do a simple `vagrant up` by using [Vagrant](https://www.vagrantup.com)'s [Ansible provisioner](https://www.vagrantup.com/docs/provisioning/ansible.html). All you need is a working [Vagrant installation](https://www.vagrantup.com/docs/installation/) (2.2.4+ but the latest version is always recommended), a [provider](https://www.vagrantup.com/docs/providers/) (tested with the latest [VirtualBox](https://www.virtualbox.org) version), and 3GB of RAM.
 
 If more than the default 10GB disk space is needed
@@ -26,7 +29,7 @@ Default ODK user
 - username: `syncuser`
 - password: `password`
 
-Password can be changed in the `var.yml` file.
+The password can be changed in the `var.yml` file.
 
 
 ## ODK LDAP Admin
@@ -34,3 +37,11 @@ Password can be changed in the `var.yml` file.
 Access at [https://127.0.0.1:40000](https://127.0.0.1:40000).
 
 See ODK Sync setup [documenation](https://docs.opendatakit.org/odk-x/sync-endpoint-setup/#sync-endpoint-setup-create-user) for LDAP Admin credentials.
+
+
+## ODK Postgres DB Connection
+
+Access at [https://127.0.0.1:5432](https://127.0.0.1:5432).
+
+Default credentials are containted in the `sync-endpoint-default-setup` [db.env](https://raw.githubusercontent.com/opendatakit/sync-endpoint-default-setup/master/db.env)
+
