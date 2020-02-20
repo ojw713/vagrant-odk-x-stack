@@ -1,0 +1,4 @@
+dn: gidNumber=500,ou=default_prefix,ou=groups,dc=example,dc=org
+changetype: modify
+add: memberuid
+memberuid: syncadmin

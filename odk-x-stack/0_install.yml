@@ -149,22 +149,37 @@
       src: /odk-x-stack/ldap/{{item}}
       dest: /usr/local
     with_items:
-      - syncgroup.ldif
-      - syncuser.ldif
+      - syncusergroup.ldif
+      - syncuseruser.ldif
+      - syncadmingroup.ldif
+      - syncadminuser.ldif
+
+  - name: Set syncadmin password 
+    lineinfile:
+      path: /usr/local/syncadminuser.ldif
+      regexp: 'userpassword'
+      line: 'userpassword: {{ sync_admin_password }}'
 
   - name: Set syncuser password 
     lineinfile:
-      path: /usr/local/syncuser.ldif
+      path: /usr/local/syncuseruser.ldif
       regexp: 'userpassword'
       line: 'userpassword: {{ sync_user_password }}'
 
   - name: Add ldif files to docker container
-    shell: |
-      docker cp /usr/local/syncuser.ldif $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}'):/usr/local/syncuser.ldif
-      docker cp /usr/local/syncgroup.ldif $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}'):/usr/local/syncgroup.ldif
+    shell:
+      docker cp /usr/local/{{item}} $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}'):/usr/local/{{item}}
+    with_items:
+      - syncusergroup.ldif
+      - syncuseruser.ldif
+      - syncadmingroup.ldif
+      - syncadminuser.ldif
 
   - name: Add syncuser to ldap
-    shell: |
-      docker exec $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}') ldapmodify -x -D 'cn=admin,dc=example,dc=org' -w admin -c -f /usr/local/syncuser.ldif
-      docker exec $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}') ldapmodify -x -D 'cn=admin,dc=example,dc=org' -w admin -c -f /usr/local/syncgroup.ldif
-
+    shell:
+      docker exec $(docker ps -f "label=com.docker.swarm.service.name=syncldap_ldap-service" --format '{{ '{{' }}.ID{{ '}}' }}') ldapmodify -x -D 'cn=admin,dc=example,dc=org' -w admin -c -f /usr/local/{{item}}
+    with_items:
+      - syncusergroup.ldif
+      - syncuseruser.ldif
+      - syncadmingroup.ldif
+      - syncadminuser.ldif

@@ -25,11 +25,15 @@ If more than the default 10GB disk space is needed
 
 Access at [http://127.0.0.1:8081/web-ui/login](http://127.0.0.1:8081/web-ui/login).
 
-Default ODK user
-- username: `syncuser`
-- password: `password`
+Default ODK users
 
-The password can be changed in the `var.yml` file.
+Site Admin:
+- username: `syncadmin`
+
+Sync User:
+- username: `syncuser`
+
+The passwords are defined in the [vars.yml](https://raw.githubusercontent.com/ojw713/vagrant-odk-x-stack/master/odk-x-stack/vars.yml) file.
 
 
 ## ODK LDAP Admin

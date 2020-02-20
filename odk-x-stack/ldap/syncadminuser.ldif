@@ -1,0 +1,13 @@
+dn: uid=syncadmin,ou=people,dc=example,dc=org
+changetype: add
+cn: Sync Admin
+gidnumber: 500
+givenname: Sync
+homedirectory: /home/users/syncadmin
+objectclass: inetOrgPerson
+objectclass: posixAccount
+objectclass: top
+sn: Admin
+uid: syncadmin
+uidnumber: 1000
+userpassword

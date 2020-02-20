@@ -9,5 +9,5 @@ objectclass: posixAccount
 objectclass: top
 sn: User
 uid: syncuser
-uidnumber: 1000
+uidnumber: 1001
 userpassword
