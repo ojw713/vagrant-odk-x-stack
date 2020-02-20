@@ -45,7 +45,7 @@ See ODK Sync setup [documenation](https://docs.opendatakit.org/odk-x/sync-endpoi
 
 ## ODK Postgres DB Connection
 
-Access at [https://127.0.0.1:5432](https://127.0.0.1:5432).
+Access at [http://127.0.0.1:5432](http://127.0.0.1:5432).
 
 Default credentials are containted in the `sync-endpoint-default-setup` [db.env](https://raw.githubusercontent.com/opendatakit/sync-endpoint-default-setup/master/db.env)
 
