@@ -49,3 +49,7 @@ Access at [http://127.0.0.1:5432](http://127.0.0.1:5432).
 
 Default credentials are containted in the `sync-endpoint-default-setup` [db.env](https://raw.githubusercontent.com/opendatakit/sync-endpoint-default-setup/master/db.env)
 
+## Switch to HTTPS
+
+Run `ansible-playbook 1_use-https.yml` from the `/odk-x-stack` directory to change to https.
+

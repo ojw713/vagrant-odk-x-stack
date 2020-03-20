@@ -1,0 +1,106 @@
+---
+
+- hosts: localhost
+  become: true
+  vars_files:
+    - vars.yml
+
+  tasks:
+
+  - name: Stop/remove odk-x docker stack (syncldap)
+    docker_stack:
+      name: syncldap
+      state: absent
+
+  - name: Ensure directory exists
+    file:
+      path: /etc/odkx-sync/{{ hostname }}
+      state: directory
+  
+  - name: Generate the private key.
+    openssl_privatekey:
+      path: /etc/odkx-sync/{{ hostname }}/privkey.pem
+  
+  - name: Generate the csr
+    openssl_csr:
+      path: /etc/ssl/private/{{ hostname }}.csr
+      privatekey_path: /etc/odkx-sync/{{ hostname }}/privkey.pem
+      common_name: "{{ hostname }}"
+  
+  - name: Generate a self-signed certificate
+    openssl_certificate:
+      path: /etc/odkx-sync/{{ hostname }}/fullchain.pem
+      privatekey_path: /etc/odkx-sync/{{ hostname }}/privkey.pem
+      csr_path: /etc/ssl/private/{{ hostname }}.csr
+      provider: selfsigned
+
+  - name: Store public cert in docker config
+    shell: 
+      docker config create {{ hostname }}.fullchain.pem /etc/odkx-sync/{{ hostname }}/fullchain.pem
+    args:
+      chdir: /usr/local/sync-endpoint-default-setup
+
+  - name: Store private key with docker secrets
+    shell: 
+      docker secret create {{ hostname }}.privkey.pem /etc/odkx-sync/{{ hostname }}/privkey.pem
+    args:
+      chdir: /usr/local/sync-endpoint-default-setup
+
+  - name: Update the sync-endpoint server https port
+    lineinfile:
+      path: /usr/local/sync-endpoint-default-setup/config/sync-endpoint/security.properties
+      regexp: "security.server.port=8081"
+      line: "security.server.securePort=8081"
+
+  - name: Copy https.conf file
+    template:
+      src: /odk-x-stack/https/sync-endpoint-https.conf
+      dest: /usr/local/sync-endpoint-default-setup/config/nginx
+
+  - name: Use new https.conf file
+    lineinfile:
+      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
+      regexp: '^\s+file: \./config/nginx/sync-endpoint-http\.conf$'
+      line: "    file: ./config/nginx/sync-endpoint-https.conf"
+
+  - name: Add certificate for nginx
+    blockinfile:
+      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
+      marker: "# Add certificate {mark}"
+      insertafter: 'file: ./config/nginx/proxy_buffer.conf'
+      block: |2
+          com.nginx.ssl_certificate:
+            external:
+              name: {{ hostname }}.fullchain.pem
+
+  - name: Add private key for nginx
+    blockinfile:
+      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
+      marker: "# Add private key {mark}"
+      insertafter: 'file: ./config/sync-endpoint/jdbc.properties'
+      block: |2
+          com.nginx.ssl_certificate_key:
+            external: 
+              name: {{ hostname }}.privkey.pem
+
+  - name: Uncomment the nginx public key config
+    lineinfile:
+      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
+      regexp: '^\s+# - com\.nginx\.ssl_certificate$'
+      line: "      - com.nginx.ssl_certificate"
+
+  - name: Uncomment the nginx secrets
+    blockinfile:
+      path: /usr/local/sync-endpoint-default-setup/docker-compose.yml
+      marker: "# Uncomment Secrets {mark}"
+      insertafter: '# - com.nginx.ssl_certificate'
+      block: |2
+            secrets:
+              - com.nginx.ssl_certificate_key
+
+  - name: Restart odk-x docker stack (syncldap)
+    docker_stack:
+      state: present
+      name: syncldap
+      compose:
+        - /usr/local/sync-endpoint-default-setup/docker-compose.yml
