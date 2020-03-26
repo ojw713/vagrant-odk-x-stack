@@ -98,6 +98,10 @@
             secrets:
               - com.nginx.ssl_certificate_key
 
+  - name: Wait for 15 seconds so docker stack can be completely removed
+    wait_for:
+      timeout: 15
+
   - name: Restart odk-x docker stack (syncldap)
     docker_stack:
       state: present
